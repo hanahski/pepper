@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Search, ScanLine, FileText } from "lucide-react";
 import { builtInPastQuestions } from "@/lib/past-questions";
+import { SaveButton } from "@/components/SaveButton";
 
 export const Route = createFileRoute("/notes/")({ component: NotesLibrary });
 
