@@ -20,19 +20,21 @@ import { pdfToImages } from "@/lib/pdf-to-images";
 import { PastQuestionArticle } from "@/components/PastQuestionArticle";
 import { MediaPlayer } from "@/components/MediaPlayer";
 import { PdfReader } from "@/components/PdfReader";
+import { VerifyStudentDialog } from "@/components/VerifyStudentDialog";
 
 
 export const Route = createFileRoute("/post/$id")({ component: PostPage });
 
 function PostPage() {
   const { id } = Route.useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const nav = useNavigate();
   const qc = useQueryClient();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanProgress, setRescanProgress] = useState<{ done: number; total: number } | null>(null);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const runOcr = useServerFn(extractTextFromImage);
 
 
@@ -82,6 +84,11 @@ function PostPage() {
 
   const download = async () => {
     if (!user) { nav({ to: "/login" }); return; }
+    if (!profile?.is_verified) {
+      toast.error("Verify you're an EBSU student to download");
+      setVerifyOpen(true);
+      return;
+    }
     if (!post.file_url) return;
     const { data, error } = await supabase.storage.from("post-files").createSignedUrl(post.file_url, 60);
     if (error) { toast.error(error.message); return; }
@@ -242,6 +249,7 @@ function PostPage() {
           </>
         )}
       </article>
+      <VerifyStudentDialog open={verifyOpen} onOpenChange={setVerifyOpen} onVerified={() => refetch()} />
     </AppShell>
   );
 }

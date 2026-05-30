@@ -34,12 +34,14 @@ export const verifyEbsuStudent = createServerFn({ method: "POST" })
 
     let parsed: any = null;
     let httpOk = false;
+    let httpStatus = 0;
     try {
       const r = await fetch(url, {
         method: "GET",
-        headers: { "X-API-Key": apiKey, Accept: "application/json" },
+        headers: { "X-API-Key": apiKey.trim(), Accept: "application/json" },
       });
       httpOk = r.ok;
+      httpStatus = r.status;
       const text = await r.text();
       try {
         parsed = JSON.parse(text);
@@ -50,8 +52,24 @@ export const verifyEbsuStudent = createServerFn({ method: "POST" })
       parsed = { error: String(e?.message ?? e) };
     }
 
+    // A bad/expired parse.bot key is a configuration problem, not a "not found".
+    if (httpStatus === 401 || httpStatus === 403) {
+      console.error("parse.bot auth rejected:", parsed);
+      return {
+        ok: false as const,
+        error:
+          "Verification service is misconfigured (invalid API key). Please contact the admin.",
+      };
+    }
+
     // parse.bot returns: { status: "success", data: { found: true/false, message: "..." } }
-    const found = !!(parsed?.data?.found === true || parsed?.found === true);
+    const found = !!(
+      parsed?.data?.found === true ||
+      parsed?.found === true ||
+      parsed?.data?.verified === true ||
+      parsed?.verified === true ||
+      parsed?.data?.status === "found"
+    );
 
     // Log the attempt regardless of outcome
     await supabaseAdmin.from("student_verifications").insert({
@@ -66,8 +84,8 @@ export const verifyEbsuStudent = createServerFn({ method: "POST" })
         parsed?.data?.message ||
         parsed?.message ||
         (httpOk
-          ? "JAMB number not found on the EBSU portal"
-          : "Could not reach the EBSU portal — try again");
+          ? "We couldn't find that JAMB number on the EBSU portal. Double-check and try again."
+          : "Could not reach the EBSU portal — please try again in a moment.");
       return { ok: false as const, error: msg };
     }
 
