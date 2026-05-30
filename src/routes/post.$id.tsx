@@ -249,6 +249,7 @@ function PostPage() {
           </>
         )}
       </article>
+      <VerifyStudentDialog open={verifyOpen} onOpenChange={setVerifyOpen} onVerified={() => refetch()} />
     </AppShell>
   );
 }
