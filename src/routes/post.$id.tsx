@@ -33,6 +33,7 @@ function PostPage() {
   const [pdfOpen, setPdfOpen] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanProgress, setRescanProgress] = useState<{ done: number; total: number } | null>(null);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const runOcr = useServerFn(extractTextFromImage);
 
 
