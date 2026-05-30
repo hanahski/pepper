@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _sqlbuf: {
+        Row: {
+          body: string | null
+          id: number
+        }
+        Insert: {
+          body?: string | null
+          id: number
+        }
+        Update: {
+          body?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       _whoami: {
         Row: {
           memberof: string | null
