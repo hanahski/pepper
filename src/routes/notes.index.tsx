@@ -45,6 +45,7 @@ function NotesLibrary() {
       created_at: "2026-05-26T00:00:00.000Z",
       uploader_id: null,
       course: n.course,
+      _kind: "past_question" as const,
     }));
 
   const allNotes = [...builtIns, ...(notes ?? [])];
