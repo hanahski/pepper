@@ -9,6 +9,7 @@ import { RankBadge } from "./RankBadge";
 import { Comments } from "./Comments";
 import { EbsuBadge } from "./EbsuBadge";
 import { MediaPlayer } from "./MediaPlayer";
+import { SaveButton } from "./SaveButton";
 import { isOnline } from "@/lib/presence";
 import type { RankTier } from "@/lib/ranks";
 import { formatDistanceToNow } from "date-fns";
