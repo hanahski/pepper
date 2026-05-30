@@ -102,14 +102,23 @@ function NotesLibrary() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((n: any) => (
-            <Link key={n.id} to="/notes/$id" params={{ id: String(n.id) }} className="bg-card border rounded-2xl p-4 shadow-card hover-lift transition block">
-              {n.course?.code && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{n.course.code}</span>
-              )}
-              <h3 className="font-bold font-display mt-1 line-clamp-2">{n.title}</h3>
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-5 whitespace-pre-wrap">{n.body}</p>
-              <p className="text-[10px] text-muted-foreground mt-3">{new Date(n.created_at).toISOString().slice(0, 10)}</p>
-            </Link>
+            <div key={n.id} className="relative">
+              <SaveButton
+                itemType={n._kind === "past_question" ? "past_question" : "note"}
+                itemId={String(n.id)}
+                title={n.title}
+                subtitle={n.course?.code ?? null}
+                className="absolute top-2 right-2 z-10"
+              />
+              <Link to="/notes/$id" params={{ id: String(n.id) }} className="bg-card border rounded-2xl p-4 shadow-card hover-lift transition block">
+                {n.course?.code && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{n.course.code}</span>
+                )}
+                <h3 className="font-bold font-display mt-1 line-clamp-2 pr-8">{n.title}</h3>
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-5 whitespace-pre-wrap">{n.body}</p>
+                <p className="text-[10px] text-muted-foreground mt-3">{new Date(n.created_at).toISOString().slice(0, 10)}</p>
+              </Link>
+            </div>
           ))}
         </div>
       )}
