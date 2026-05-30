@@ -20,6 +20,7 @@ import { pdfToImages } from "@/lib/pdf-to-images";
 import { PastQuestionArticle } from "@/components/PastQuestionArticle";
 import { MediaPlayer } from "@/components/MediaPlayer";
 import { PdfReader } from "@/components/PdfReader";
+import { VerifyStudentDialog } from "@/components/VerifyStudentDialog";
 
 
 export const Route = createFileRoute("/post/$id")({ component: PostPage });
