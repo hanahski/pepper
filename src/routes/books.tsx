@@ -205,8 +205,16 @@ function BooksPage() {
             return (
               <div
                 key={b.id}
-                className="bg-card border rounded-2xl overflow-hidden shadow-card flex flex-col"
+                className="relative bg-card border rounded-2xl overflow-hidden shadow-card flex flex-col"
               >
+                <SaveButton
+                  itemType="book"
+                  itemId={b.id}
+                  title={b.title}
+                  subtitle={b.author}
+                  thumbUrl={b.cover_url}
+                  className="absolute top-2 right-2 z-10"
+                />
                 <Link to="/books/read/$id" params={{ id: b.id }} className="block">
                   <div className="aspect-[2/3] bg-muted overflow-hidden">
                     {b.cover_url ? (
