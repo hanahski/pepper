@@ -26,7 +26,7 @@ export const Route = createFileRoute("/post/$id")({ component: PostPage });
 
 function PostPage() {
   const { id } = Route.useParams();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const nav = useNavigate();
   const qc = useQueryClient();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
