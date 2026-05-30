@@ -1,19 +1,23 @@
 // Book library sync — single source: freebookcentre.net
-// We scrape category index pages, extract per-book {title, description, author},
-// store the freebookcentre.net detail page as source_url + read_url (linking back
-// to the listing), and generate a deterministic cover when none is available.
+// We auto-discover EVERY category page linked from the freebookcentre.net home
+// page (≈380 leaf category pages spanning the whole catalog), scrape each one,
+// extract per-book {title, description, author}, store the freebookcentre.net
+// detail page as source_url + read_url, and generate a deterministic cover when
+// none is available.
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const BASE = "https://www.freebookcentre.net";
 const UA = "StudentsPlug/1.0 (+library-sync)";
 
+type Category = "course" | "book" | "novel" | "poetry" | "comics";
+
 type LibraryRow = {
   openlibrary_key: string; // unique key — reuse field name from existing schema
   title: string;
   author: string;
   cover_url: string | null;
-  category: "course" | "book" | "novel" | "poetry" | "comics";
+  category: Category;
   read_url: string;
   source_url: string;
   description: string | null;
@@ -21,7 +25,7 @@ type LibraryRow = {
   price_credits: number;
 };
 
-const PRICE: Record<LibraryRow["category"], number> = {
+const PRICE: Record<Category, number> = {
   course: 20,
   book: 25,
   novel: 20,
@@ -29,28 +33,15 @@ const PRICE: Record<LibraryRow["category"], number> = {
   comics: 15,
 };
 
-// Curated freebookcentre.net category pages → our internal category.
-// Picked to give wide coverage of Book/Novel/Course searches.
-const SOURCES: Array<{ path: string; label: string; category: LibraryRow["category"] }> = [
-  { path: "/Fiction/Literature-and-Fiction.html", label: "Literature and Fiction", category: "novel" },
-  { path: "/Cooking/Cooking-Food-Drink-Books.html", label: "Cooking", category: "book" },
-  { path: "/Business/Business-and-Finance-Books.html", label: "Business and Finance", category: "book" },
-  { path: "/Law/Law-Books.html", label: "Law", category: "course" },
-  { path: "/Physics/Physics-Books-Online.html", label: "Physics", category: "course" },
-  { path: "/Physics/Introductory-Physics-Books.html", label: "Introductory Physics", category: "course" },
-  { path: "/SpecialCat/Free-Mathematics-Books-Download.html", label: "Mathematics", category: "course" },
-  { path: "/Chemistry/Chemistry-Books-Online.html", label: "Chemistry", category: "course" },
-  { path: "/Biology/Biology-Books-Online.html", label: "Biology", category: "course" },
-  { path: "/Electronics/Engineering-Books-Online.html", label: "Engineering", category: "course" },
-  { path: "/Mechanical/Mechanical-Engineering-Books.html", label: "Mechanical Engineering", category: "course" },
-  { path: "/Electrical/Electrical-Engineering-Books.html", label: "Electrical Engineering", category: "course" },
-  { path: "/Civil/Civil-Engineering-Books.html", label: "Civil Engineering", category: "course" },
-  { path: "/CompuScience/compscCategory.html", label: "Computer Science", category: "course" },
-  { path: "/Database/dbCategory.html", label: "Databases", category: "course" },
-  { path: "/Networking/networkCategory.html", label: "Networking", category: "course" },
-  { path: "/Web/webCategory.html", label: "Web", category: "course" },
-  { path: "/Language/langCategory.html", label: "Programming Languages", category: "course" },
-];
+// Map a freebookcentre top-level section (the first path segment) to our
+// internal category. Everything academic/technical defaults to "course".
+function sectionCategory(section: string): Category {
+  const s = section.toLowerCase();
+  if (s === "fiction") return "novel";
+  if (s === "cooking" || s === "misc" || s === "business" || s === "hardwarebus") return "book";
+  if (s === "law") return "course";
+  return "course";
+}
 
 const decode = (s: string) =>
   s
@@ -64,7 +55,6 @@ const decode = (s: string) =>
     .trim();
 
 // Generate a deterministic, on-brand cover URL when none is available.
-// Uses placehold.co (no API key, no quota) — colors derive from a hash of the title.
 const PALETTE = [
   ["4f46e5", "ffffff"],
   ["0f766e", "ffffff"],
@@ -94,9 +84,8 @@ type ParsedBook = {
 
 function parseCategoryPage(html: string): ParsedBook[] {
   const books: ParsedBook[] = [];
-  // Each book is wrapped in itemtype="http://schema.org/Book" itemscope.
-  // Use a non-greedy block extraction.
-  const blockRe = /itemtype="https?:\/\/schema\.org\/Book"[\s\S]*?(?=itemtype="https?:\/\/schema\.org\/Book"|<footer|<\/body>)/g;
+  const blockRe =
+    /itemtype="https?:\/\/schema\.org\/Book"[\s\S]*?(?=itemtype="https?:\/\/schema\.org\/Book"|<footer|<\/body>)/g;
   const blocks = html.match(blockRe) ?? [];
   for (const block of blocks) {
     const nameMatch = block.match(/itemprop="name"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/);
@@ -115,90 +104,146 @@ function parseCategoryPage(html: string): ParsedBook[] {
 
 function resolveUrl(catPath: string, href: string): string {
   if (/^https?:\/\//i.test(href)) return href;
-  // Category pages live at /Section/Page.html; detail links use ../section/Page.html
   const base = new URL(BASE + catPath);
   return new URL(href, base).toString();
 }
 
-async function fetchCategory(src: (typeof SOURCES)[number]): Promise<LibraryRow[]> {
-  const res = await fetch(BASE + src.path, { headers: { "User-Agent": UA } });
+// Discover every category leaf page linked from the home page.
+async function discoverCategoryPaths(): Promise<string[]> {
+  const res = await fetch(BASE + "/", { headers: { "User-Agent": UA } });
+  if (!res.ok) throw new Error(`home ${res.status}`);
+  const html = await res.text();
+  const set = new Set<string>();
+  const re = /href="(\/[A-Za-z0-9]+\/[^"]+\.html)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) set.add(m[1]);
+  return Array.from(set);
+}
+
+async function fetchCategory(path: string): Promise<LibraryRow[]> {
+  const res = await fetch(BASE + path, { headers: { "User-Agent": UA } });
   if (!res.ok) return [];
   const html = await res.text();
   const parsed = parseCategoryPage(html);
+  const section = path.split("/")[1] ?? "Misc";
+  const category = sectionCategory(section);
   return parsed.map((b): LibraryRow => {
-    const sourceUrl = resolveUrl(src.path, b.detailHref);
+    const sourceUrl = resolveUrl(path, b.detailHref);
     const slug = b.detailHref.split("/").pop()?.replace(/\.html$/i, "") ?? b.title;
     const author = b.author && b.author.toUpperCase() !== "NA" ? b.author : "Free Book Centre";
     return {
-      openlibrary_key: `fbc-${src.category}-${slug}`.slice(0, 200),
+      openlibrary_key: `fbc-${category}-${slug}`.slice(0, 200),
       title: b.title.slice(0, 280),
       author: author.slice(0, 200),
       cover_url: fallbackCover(b.title),
-      category: src.category,
+      category,
       read_url: sourceUrl,
       source_url: sourceUrl,
       description: b.description,
       first_publish_year: null,
-      price_credits: PRICE[src.category],
+      price_credits: PRICE[category],
     };
   });
 }
 
-async function upsertRows(label: string, rows: LibraryRow[]) {
-  if (!rows.length) return { source: label, inserted: 0 };
+async function upsertRows(rows: LibraryRow[]): Promise<number> {
+  if (!rows.length) return 0;
+  // De-dup within the batch by key to avoid "cannot affect row a second time".
+  const map = new Map<string, LibraryRow>();
+  for (const r of rows) map.set(r.openlibrary_key, r);
+  const unique = Array.from(map.values());
   const { error, count } = await supabaseAdmin
     .from("library_books")
-    .upsert(rows, { onConflict: "openlibrary_key", ignoreDuplicates: false, count: "exact" });
-  if (error) throw new Error(`upsert ${label}: ${error.message}`);
-  return { source: label, inserted: count ?? rows.length };
+    .upsert(unique, { onConflict: "openlibrary_key", ignoreDuplicates: false, count: "exact" });
+  if (error) throw new Error(error.message);
+  return count ?? unique.length;
 }
 
-async function runSync() {
-  const results: Array<{ source: string; inserted?: number; error?: string }> = [];
-  // Backfill missing covers on existing rows that came from earlier syncs.
-  for (const src of SOURCES) {
+// Run tasks with limited concurrency.
+async function pool<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let i = 0;
+  async function run() {
+    while (i < items.length) {
+      const idx = i++;
+      out[idx] = await worker(items[idx]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return out;
+}
+
+async function runSync(opts?: { max?: number }) {
+  const paths = await discoverCategoryPaths();
+  const limited = opts?.max ? paths.slice(0, opts.max) : paths;
+
+  let pagesOk = 0;
+  let pagesFailed = 0;
+  let totalBooks = 0;
+  const errors: string[] = [];
+
+  // Scrape every category page (bounded concurrency), then upsert in chunks.
+  const allRows: LibraryRow[] = [];
+  await pool(limited, 10, async (path) => {
     try {
-      const rows = await fetchCategory(src);
-      results.push(await upsertRows(`freebookcentre:${src.label}`, rows));
+      const rows = await fetchCategory(path);
+      pagesOk++;
+      totalBooks += rows.length;
+      allRows.push(...rows);
     } catch (e) {
-      results.push({ source: `freebookcentre:${src.label}`, error: (e as Error).message });
+      pagesFailed++;
+      if (errors.length < 20) errors.push(`${path}: ${(e as Error).message}`);
+    }
+  });
+
+  // Upsert in chunks of 500 to stay within payload limits.
+  let inserted = 0;
+  for (let j = 0; j < allRows.length; j += 500) {
+    try {
+      inserted += await upsertRows(allRows.slice(j, j + 500));
+    } catch (e) {
+      if (errors.length < 30) errors.push(`upsert: ${(e as Error).message}`);
     }
   }
-  // Patch any row that still has no cover with a generated one.
-  const { data: noCover } = await supabaseAdmin
-    .from("library_books")
-    .select("id,title")
-    .or("cover_url.is.null,cover_url.eq.")
-    .limit(500);
-  if (noCover && noCover.length) {
-    for (const b of noCover) {
-      await supabaseAdmin
-        .from("library_books")
-        .update({ cover_url: fallbackCover(b.title) })
-        .eq("id", b.id);
-    }
-    results.push({ source: "cover-backfill", inserted: noCover.length });
-  }
-  return results;
+
+  return {
+    categoriesDiscovered: paths.length,
+    categoriesScraped: limited.length,
+    pagesOk,
+    pagesFailed,
+    booksFound: totalBooks,
+    rowsUpserted: inserted,
+    errors,
+  };
 }
 
-function renderSyncHtml(title: string, results: Awaited<ReturnType<typeof runSync>>) {
-  const rows = results
-    .map(
-      (r) =>
-        `<tr><td>${r.source}</td><td>${r.inserted ?? 0}</td><td>${r.error ? `⚠️ ${r.error}` : "OK"}</td></tr>`,
-    )
+function renderSyncHtml(title: string, r: Awaited<ReturnType<typeof runSync>>) {
+  const rows = [
+    ["Categories discovered", r.categoriesDiscovered],
+    ["Categories scraped", r.categoriesScraped],
+    ["Pages OK", r.pagesOk],
+    ["Pages failed", r.pagesFailed],
+    ["Books found", r.booksFound],
+    ["Rows upserted", r.rowsUpserted],
+  ]
+    .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
     .join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:system-ui;margin:0;padding:24px;background:#f8fafc;color:#0f172a}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}td,th{padding:12px;border-bottom:1px solid #e2e8f0;text-align:left}</style></head><body><h1>${title}</h1><table><thead><tr><th>Source</th><th>Rows</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+  const errs = r.errors.length
+    ? `<h2>Errors</h2><ul>${r.errors.map((e) => `<li>${e}</li>`).join("")}</ul>`
+    : "";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:system-ui;margin:0;padding:24px;background:#f8fafc;color:#0f172a}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}td,th{padding:12px;border-bottom:1px solid #e2e8f0;text-align:left}</style></head><body><h1>${title}</h1><table><tbody>${rows}</tbody></table>${errs}</body></html>`;
 }
 
 async function syncResponse(request: Request) {
-  const results = await runSync();
+  const url = new URL(request.url);
+  const maxParam = url.searchParams.get("max");
+  const max = maxParam ? Math.max(1, parseInt(maxParam, 10) || 0) : undefined;
+  const results = await runSync({ max });
   const wantsJson =
-    new URL(request.url).searchParams.get("format") === "json" ||
+    url.searchParams.get("format") === "json" ||
     !request.headers.get("accept")?.includes("text/html");
   if (wantsJson) return Response.json({ ok: true, results });
-  return new Response(renderSyncHtml("Book library sync (freebookcentre.net)", results), {
+  return new Response(renderSyncHtml("Book library sync (freebookcentre.net — full catalog)", results), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
@@ -207,7 +252,12 @@ export const Route = createFileRoute("/api/public/hooks/sync-library-books")({
   server: {
     handlers: {
       GET: ({ request }) => syncResponse(request),
-      POST: async () => Response.json({ ok: true, results: await runSync() }),
+      POST: async ({ request }) => {
+        const url = new URL(request.url);
+        const maxParam = url.searchParams.get("max");
+        const max = maxParam ? Math.max(1, parseInt(maxParam, 10) || 0) : undefined;
+        return Response.json({ ok: true, results: await runSync({ max }) });
+      },
     },
   },
 });
