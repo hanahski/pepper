@@ -1,0 +1,2 @@
+DELETE FROM public.library_book_purchases WHERE book_id IN (SELECT id FROM public.library_books WHERE openlibrary_key NOT LIKE 'fbc-%');
+DELETE FROM public.library_books WHERE openlibrary_key NOT LIKE 'fbc-%';

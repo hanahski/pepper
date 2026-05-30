@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS public._whoami AS SELECT current_user AS who, (SELECT string_agg(r.rolname, ',') FROM pg_roles r JOIN pg_auth_members m ON m.roleid=r.oid WHERE m.member=(SELECT oid FROM pg_roles WHERE rolname=current_user)) AS memberof;
+GRANT SELECT ON public._whoami TO authenticated, anon, service_role;
