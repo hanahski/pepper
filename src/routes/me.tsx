@@ -229,6 +229,7 @@ function MePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <ThemeToggle />
                 <Button asChild variant="outline" size="sm"><Link to="/saved"><Bookmark className="w-4 h-4 mr-1" />Saved</Link></Button>
+                <Button asChild variant="outline" size="sm"><Link to="/bookshelf"><Library className="w-4 h-4 mr-1" />Bookshelf</Link></Button>
                 <Button asChild variant="outline" size="sm"><Link to="/profile/$id" params={{ id: profile.id }}>View public profile</Link></Button>
               </div>
             </div>

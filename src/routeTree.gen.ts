@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as FacultiesRouteImport } from './routes/faculties'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as BookshelfRouteImport } from './routes/bookshelf'
 import { Route as BooksRouteImport } from './routes/books'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -97,6 +98,11 @@ const FacultiesRoute = FacultiesRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookshelfRoute = BookshelfRouteImport.update({
+  id: '/bookshelf',
+  path: '/bookshelf',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BooksRoute = BooksRouteImport.update({
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/blog': typeof BlogRouteWithChildren
   '/books': typeof BooksRoute
+  '/bookshelf': typeof BookshelfRoute
   '/chat': typeof ChatRoute
   '/faculties': typeof FacultiesRoute
   '/games': typeof GamesRouteWithChildren
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/blog': typeof BlogRouteWithChildren
   '/books': typeof BooksRoute
+  '/bookshelf': typeof BookshelfRoute
   '/chat': typeof ChatRoute
   '/faculties': typeof FacultiesRoute
   '/games': typeof GamesRouteWithChildren
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/blog': typeof BlogRouteWithChildren
   '/books': typeof BooksRoute
+  '/bookshelf': typeof BookshelfRoute
   '/chat': typeof ChatRoute
   '/faculties': typeof FacultiesRoute
   '/games': typeof GamesRouteWithChildren
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blog'
     | '/books'
+    | '/bookshelf'
     | '/chat'
     | '/faculties'
     | '/games'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blog'
     | '/books'
+    | '/bookshelf'
     | '/chat'
     | '/faculties'
     | '/games'
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blog'
     | '/books'
+    | '/bookshelf'
     | '/chat'
     | '/faculties'
     | '/games'
@@ -506,6 +518,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   BlogRoute: typeof BlogRouteWithChildren
   BooksRoute: typeof BooksRoute
+  BookshelfRoute: typeof BookshelfRoute
   ChatRoute: typeof ChatRoute
   FacultiesRoute: typeof FacultiesRoute
   GamesRoute: typeof GamesRouteWithChildren
@@ -605,6 +618,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookshelf': {
+      id: '/bookshelf'
+      path: '/bookshelf'
+      fullPath: '/bookshelf'
+      preLoaderRoute: typeof BookshelfRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/books': {
@@ -876,6 +896,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   BlogRoute: BlogRouteWithChildren,
   BooksRoute: BooksRoute,
+  BookshelfRoute: BookshelfRoute,
   ChatRoute: ChatRoute,
   FacultiesRoute: FacultiesRoute,
   GamesRoute: GamesRouteWithChildren,
