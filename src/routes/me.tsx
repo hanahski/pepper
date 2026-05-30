@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Copy, Gift, Coins, Camera, Ticket, Bookmark, ShieldCheck, ShieldAlert } from "lucide-react";
+import { LogOut, Copy, Gift, Coins, Camera, Ticket, Bookmark, ShieldCheck, ShieldAlert, Library } from "lucide-react";
 import { enhanceImageFile } from "@/lib/image-enhance";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AvatarLightbox } from "@/components/AvatarLightbox";
@@ -229,6 +229,7 @@ function MePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <ThemeToggle />
                 <Button asChild variant="outline" size="sm"><Link to="/saved"><Bookmark className="w-4 h-4 mr-1" />Saved</Link></Button>
+                <Button asChild variant="outline" size="sm"><Link to="/bookshelf"><Library className="w-4 h-4 mr-1" />Bookshelf</Link></Button>
                 <Button asChild variant="outline" size="sm"><Link to="/profile/$id" params={{ id: profile.id }}>View public profile</Link></Button>
               </div>
             </div>
@@ -322,7 +323,7 @@ function MePage() {
           <div>
             <Label>Your photo or avatar</Label>
             <div className="flex items-center gap-3 mt-2 mb-3">
-              <img src={avatarDataUri(avatar)} alt="" className="w-16 h-16 rounded-full border-2 border-primary object-cover" />
+              <img src={avatarDataUri(avatar)} alt="" style={{ width: 64, height: 64 }} className="block w-16 h-16 rounded-full border-2 border-primary object-cover aspect-square shrink-0" />
               <div className="flex flex-col gap-1.5">
                 <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = ""; }} />

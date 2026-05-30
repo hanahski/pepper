@@ -9,6 +9,7 @@ import { RankBadge } from "./RankBadge";
 import { Comments } from "./Comments";
 import { EbsuBadge } from "./EbsuBadge";
 import { MediaPlayer } from "./MediaPlayer";
+import { SaveButton } from "./SaveButton";
 import { isOnline } from "@/lib/presence";
 import type { RankTier } from "@/lib/ranks";
 import { formatDistanceToNow } from "date-fns";
@@ -220,6 +221,16 @@ export function PostCard({ post, locked }: { post: FeedPost; locked?: boolean })
         <span className="inline-flex items-center gap-1 px-2 py-1 text-muted-foreground">
           <Eye className="w-3.5 h-3.5" /> {post.view_count}
         </span>
+        {!locked && (
+          <SaveButton
+            itemType="post"
+            itemId={post.id}
+            title={post.title}
+            subtitle={post.author?.display_name ?? null}
+            thumbUrl={post.image_url ?? null}
+            variant="pill"
+          />
+        )}
         {canDelete && (
           <button onClick={onDelete} className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-full text-destructive hover:bg-destructive/10">
             <Trash2 className="w-3.5 h-3.5" /> Delete

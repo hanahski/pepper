@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { SaveButton } from "@/components/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, ShoppingBag, Search, Ticket, BookOpen, Megaphone, Package, QrCode, Coins, RefreshCw } from "lucide-react";
@@ -202,6 +203,14 @@ function MarketPage() {
                   {l.listing_kind ?? "product"}
                 </span>
               </div>
+              <SaveButton
+                itemType="market"
+                itemId={l.id}
+                title={l.title}
+                subtitle={l.category}
+                thumbUrl={l.photos?.[0] ?? null}
+                className="absolute top-2 right-2 z-10"
+              />
               {l.photos?.[0] && (
                 <img src={l.photos[0]} alt={l.title} className="w-full h-40 object-cover rounded-xl mb-3 mt-4" />
               )}
