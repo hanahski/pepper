@@ -202,6 +202,14 @@ function MarketPage() {
                   {l.listing_kind ?? "product"}
                 </span>
               </div>
+              <SaveButton
+                itemType="market"
+                itemId={l.id}
+                title={l.title}
+                subtitle={l.category}
+                thumbUrl={l.photos?.[0] ?? null}
+                className="absolute top-2 right-2 z-10"
+              />
               {l.photos?.[0] && (
                 <img src={l.photos[0]} alt={l.title} className="w-full h-40 object-cover rounded-xl mb-3 mt-4" />
               )}
