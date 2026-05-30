@@ -19,7 +19,8 @@ export function AvatarDisplay({
         alt=""
         width={size}
         height={size}
-        className="rounded-full border-2 border-card shadow-card object-cover"
+        style={{ width: size, height: size }}
+        className="block rounded-full border-2 border-card shadow-card object-cover aspect-square"
       />
       {online && (
         <span
