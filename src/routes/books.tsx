@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Loader2, Coins, Check, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { SaveButton } from "@/components/SaveButton";
 
 export const Route = createFileRoute("/books")({ component: BooksPage });
 
