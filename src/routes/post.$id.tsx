@@ -83,6 +83,11 @@ function PostPage() {
 
   const download = async () => {
     if (!user) { nav({ to: "/login" }); return; }
+    if (!profile?.is_verified) {
+      toast.error("Verify you're an EBSU student to download");
+      setVerifyOpen(true);
+      return;
+    }
     if (!post.file_url) return;
     const { data, error } = await supabase.storage.from("post-files").createSignedUrl(post.file_url, 60);
     if (error) { toast.error(error.message); return; }
