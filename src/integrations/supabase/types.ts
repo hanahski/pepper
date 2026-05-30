@@ -14,7 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      _whoami: {
+        Row: {
+          memberof: string | null
+          who: unknown
+        }
+        Insert: {
+          memberof?: string | null
+          who?: unknown
+        }
+        Update: {
+          memberof?: string | null
+          who?: unknown
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
